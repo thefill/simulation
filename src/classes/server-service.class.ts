@@ -1,5 +1,6 @@
 import express, {Application} from 'express';
 import {IInjection} from 'jetli';
+import {IServerConfig, ISimulationConfig} from '../interfaces';
 
 /**
  * Server service
@@ -7,9 +8,10 @@ import {IInjection} from 'jetli';
 export class ServerService implements IInjection {
     public initialised = false;
     protected server: Application = express();
-    protected port = 3000;
+    protected config: IServerConfig;
 
-    constructor() {
+    constructor(config?: IServerConfig) {
+        this.applyConfig(config);
         this.setupRoutes();
     }
 
@@ -21,7 +23,7 @@ export class ServerService implements IInjection {
         await this.startServer();
         this.initialised = true;
         // tslint:disable-next-line
-        console.log(`ServerService: ready | listening on port ${this.port}`);
+        console.log(`ServerService: ready | listening on port ${this.config.port}`);
     }
 
     /**
@@ -29,6 +31,8 @@ export class ServerService implements IInjection {
      */
     protected setupRoutes() {
         // TODO: add control routes
+        //  status route
+        //  put / get / delete / post
     }
 
     /**
@@ -37,9 +41,24 @@ export class ServerService implements IInjection {
      */
     protected async startServer(): Promise<void> {
         await new Promise((resolve) => {
-            this.server.listen(this.port, () => {
+            this.server.listen(this.config.port, () => {
                 resolve();
             });
         });
+    }
+
+    /**
+     * Apply config
+     * @param {ISimulationConfig} config
+     */
+    protected applyConfig(config?: IServerConfig) {
+        this.config = {
+            port: 8000,
+            routes: []
+        };
+
+        if (config) {
+            Object.assign(this.config, config);
+        }
     }
 }

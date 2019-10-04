@@ -1,6 +1,8 @@
 import {IInjection} from 'jetli';
 import SuperAgent, {Request, Response} from 'superagent';
-import {HttpMethod, ProxyOverwriteCallback} from '../types';
+import {HttpMethod} from '../enums';
+import {IHttpProxyConfig} from '../interfaces';
+import {ProxyOverwriteCallback} from '../types';
 import {GenericDataStore} from './generic-data-store.class';
 
 /**
@@ -11,6 +13,16 @@ export class HttpProxyService implements IInjection {
     public initialised = false;
     protected overwrites: GenericDataStore = new GenericDataStore();
     protected client = SuperAgent;
+    protected config: IHttpProxyConfig;
+
+    constructor(config?: IHttpProxyConfig) {
+        this.applyConfig(config);
+
+        // set provided overwrites
+        for (const overwrite of this.config.overwrites) {
+            this.setOverwrite(overwrite.method, overwrite.url, overwrite.callback);
+        }
+    }
 
     /**
      * Initialise http proxy service
@@ -30,7 +42,7 @@ export class HttpProxyService implements IInjection {
      * @return {Promise<RESPONSE>}
      */
     public async get<RESPONSE = any>(url: string, headers?: any, payload?: any): Promise<RESPONSE> {
-        return this.resolveRequest<RESPONSE>('GET', url, headers, payload);
+        return this.resolveRequest<RESPONSE>(HttpMethod.GET, url, headers, payload);
     }
 
     /**
@@ -41,7 +53,7 @@ export class HttpProxyService implements IInjection {
      * @return {Promise<RESPONSE>}
      */
     public async post<RESPONSE = any>(url: string, headers?: any, payload?: any): Promise<RESPONSE> {
-        return this.resolveRequest<RESPONSE>('POST', url, headers, payload);
+        return this.resolveRequest<RESPONSE>(HttpMethod.POST, url, headers, payload);
     }
 
     /**
@@ -52,7 +64,7 @@ export class HttpProxyService implements IInjection {
      * @return {Promise<RESPONSE>}
      */
     public async put<RESPONSE = any>(url: string, headers?: any, payload?: any): Promise<RESPONSE> {
-        return this.resolveRequest<RESPONSE>('PUT', url, headers, payload);
+        return this.resolveRequest<RESPONSE>(HttpMethod.PUT, url, headers, payload);
     }
 
     /**
@@ -63,33 +75,33 @@ export class HttpProxyService implements IInjection {
      * @return {Promise<RESPONSE>}
      */
     public async delete<RESPONSE = any>(url: string, headers?: any, payload?: any): Promise<RESPONSE> {
-        return this.resolveRequest<RESPONSE>('DELETE', url, headers, payload);
+        return this.resolveRequest<RESPONSE>(HttpMethod.DELETE, url, headers, payload);
     }
 
     /**
      * Unset url that should be overwritten
      * @param {"GET" | "POST" | "PUT" | "DELETE"} method
-     * @param {string} pattern
+     * @param {string} url
      */
     public unsetOverwrite(
         method: HttpMethod,
-        pattern: string
+        url: string
     ): void {
-        this.overwrites.delete(method, pattern);
+        this.overwrites.delete(method, url);
     }
 
     /**
      * Set url that should be overwritten
      * @param {"GET" | "POST" | "PUT" | "DELETE"} method
-     * @param {string} pattern
+     * @param {string} url
      * @param {ProxyOverwriteCallback} callback
      */
     public setOverwrite(
         method: HttpMethod,
-        pattern: string,
+        url: string,
         callback: ProxyOverwriteCallback
     ): void {
-        this.overwrites.set(method, pattern, callback);
+        this.overwrites.set(method, url, callback);
     }
 
     /**
@@ -132,16 +144,16 @@ export class HttpProxyService implements IInjection {
 
         let request: Request;
         switch (method) {
-            case 'GET':
+            case HttpMethod.GET:
                 request = this.client.get(url);
                 break;
-            case 'POST':
+            case HttpMethod.POST:
                 request = this.client.post(url);
                 break;
-            case 'PUT':
+            case HttpMethod.PUT:
                 request = this.client.put(url);
                 break;
-            case 'DELETE':
+            case HttpMethod.DELETE:
                 request = this.client.delete(url);
                 break;
             default:
@@ -171,5 +183,19 @@ export class HttpProxyService implements IInjection {
         }
 
         return response.body;
+    }
+
+    /**
+     * Apply config
+     * @param {ISimulationConfig} config
+     */
+    protected applyConfig(config?: IHttpProxyConfig) {
+        this.config = {
+            overwrites: []
+        };
+
+        if (config) {
+            Object.assign(this.config, config);
+        }
     }
 }

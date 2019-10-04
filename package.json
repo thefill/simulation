@@ -11,6 +11,8 @@
         "build": "run-s -s clean:build build:esm build:cjs",
         "build:esm": "tsc -p tsconfig.esm.json",
         "build:cjs": "tsc -p tsconfig.cjs.json",
+        "execute": "node dist/cjs/index.js",
+        "it": "run-s -s clean:build build:cjs execute",
         "// CODE QUALITY SCRIPTS //": "----------------------------------------------",
         "lint": "tslint -c tslint.json src/**/*.ts",
         "test": "run-s clean:test test:unit test:e2e test:coverage",

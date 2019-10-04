@@ -30,6 +30,7 @@ export class EventCronService extends EventEmitter implements IInjection {
         period: 'd' | 'h' | 'm' | 's' | 'ms' = 's',
         executionLimit: number = -1
     ): void {
+        // TODO: implement
     }
 
     /**
@@ -37,5 +38,6 @@ export class EventCronService extends EventEmitter implements IInjection {
      * @param {string} eventType
      */
     public unset(eventType: string): void {
+        // TODO: implement
     }
 }

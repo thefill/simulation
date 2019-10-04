@@ -13,7 +13,11 @@ export class GenericDataStore {
      * @param entry
      * @return {string | number}
      */
-    public set(namespaceKey: string | number, entryKey?: string | number, entry?: any): string | number {
+    public set(namespaceKey: string | number, entryKey?: string | number, entry?: any): string | number | void {
+        if (!namespaceKey && namespaceKey !== 0) {
+            return;
+        }
+
         const namespace = this.getNamespace(namespaceKey);
 
         if (!entryKey && entryKey !== 0) {
@@ -55,6 +59,7 @@ export class GenericDataStore {
 
         if (!entryKey && entryKey !== 0) {
             delete this.data[namespaceKey];
+            return;
         }
 
         delete this.data[namespaceKey][entryKey!];
