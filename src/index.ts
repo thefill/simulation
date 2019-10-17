@@ -24,7 +24,19 @@ const config: ISimulationConfig = {
     //         method: HttpMethod.POST,
     //         callback: InsertHereBindedMethodFromPodLikeApiGateway
     //     }]
-    // }
+    // },
+    cron: {
+        tickers: [{
+            eventType: 'donkey',
+            emitLimit: 10,
+            periodCount: 2,
+            period: 's',
+            tickerCallback: () => {
+                // tslint:disable-next-line
+                console.log('tick');
+            }
+        }]
+    }
 };
 
 runSimulation(config)

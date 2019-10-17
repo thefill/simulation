@@ -4,7 +4,7 @@ import {GenericDataStore} from './generic-data-store.class';
 /**
  * Data-store service
  */
-export class DataStoreService implements IInjection{
+export class DataStoreService implements IInjection {
     public initialised = false;
     protected dataStores: { [dataStoreKey: string]: GenericDataStore } = {};
 
@@ -12,7 +12,7 @@ export class DataStoreService implements IInjection{
      * Initialise data-store service
      * @return {Promise<void>}
      */
-    public async init(): Promise<void>{
+    public async init(): Promise<void> {
         this.initialised = true;
         // tslint:disable-next-line
         console.log('DataStoreService: ready');

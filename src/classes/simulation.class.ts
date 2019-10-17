@@ -1,14 +1,14 @@
 import {IInjection, jetli} from 'jetli';
 import {ISimulationConfig} from '../interfaces';
 import {DataStoreService} from './data-store-service.class';
-import {EventCronService} from './event-cron-service.class';
+import {CronService} from './cron-service.class';
 import {HttpProxyService} from './http-proxy-service.class';
 import {ServerService} from './server-service.class';
 
 export class Simulation implements IInjection {
     public initialised = false;
     public serverService: ServerService;
-    public eventCronService: EventCronService;
+    public eventCronService: CronService;
     public httpProxyService: HttpProxyService;
     public dataStoreService: DataStoreService;
     public config: ISimulationConfig;
@@ -22,7 +22,7 @@ export class Simulation implements IInjection {
      * @return {Promise<void>}
      */
     public async init() {
-        this.eventCronService = await jetli.get(EventCronService);
+        this.eventCronService = await jetli.get(CronService, this.config.cron);
         this.httpProxyService = await jetli.get(HttpProxyService, this.config.httpProxy);
         this.dataStoreService = await jetli.get(DataStoreService);
 

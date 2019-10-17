@@ -1,7 +1,10 @@
+import {HttpMethod} from '../enums';
+
 export type ServerRequestCallback = (
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    method: HttpMethod,
     url: string,
-    headers?: any,
+    headers: any,
+    params: any,
     payload?: any
 ) => Promise<{
     statusCode: number;

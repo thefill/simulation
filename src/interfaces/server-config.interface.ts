@@ -1,12 +1,8 @@
-import {HttpMethod} from '../enums';
-import {ServerRequestCallback} from '../types';
+import {IRouteConfig} from './route-config.interface';
 
 export interface IServerConfig {
     // server port
     port: number;
-    routes?: Array<{
-        route: string;
-        method: HttpMethod;
-        callback: ServerRequestCallback
-    }>;
+    // server routes
+    routes?: IRouteConfig[];
 }
