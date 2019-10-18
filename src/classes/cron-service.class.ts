@@ -38,7 +38,7 @@ export class CronService extends EventEmitter implements IInjection {
         const startTime = new Date().getTime();
         const emitCount = 0;
         const previousEmitTime = 0;
-        let nextEmitTime = 0;
+        let nextEmitTime = new Date().getTime();
         const configStoreEntry: ITickerConfigStoreEntry = {
             ...tickConfig, startTime, stepTime, nextEmitTime, emitCount, previousEmitTime
         };
@@ -160,7 +160,7 @@ export class CronService extends EventEmitter implements IInjection {
      */
     protected heartbeatTickEvaluation() {
         // tslint:disable-next-line
-        console.log('cron eval');
+        console.log(`---------- cron eval ------------ hh:${new Date().getMinutes()}:${new Date().getSeconds()}`);
         const currentTime = new Date().getTime();
 
         // evaluate each ticker config
@@ -172,11 +172,16 @@ export class CronService extends EventEmitter implements IInjection {
             const previousEmitTime = tickerStoreEntry.previousEmitTime;
             // tslint:disable-next-line
             console.log(
-                `${eventType} ticker`, ' | ', `emits: ${emitCount}/${emitLimit}`, ' | ', `Trigger time: ${emitTime}`
+                `${eventType} ticker eval`, ' | ', `emits: ${emitCount}/${emitLimit}`, ' | ',
+                `Trigger time: ${emitTime}`
             );
 
             // check if we should emit event now, be sure we dont emit multiple times for same nextEmitTime
-            if (emitTime >= currentTime && emitTime !== previousEmitTime) {
+            // tslint:disable-next-line
+            console.log(`Test: ${emitTime} >= ${currentTime} && ${emitTime} !== ${previousEmitTime}`);
+            // lets take into consideration events between previous tick and now (e.g. if step is uneven)
+            if (emitTime >= currentTime - this.config.heardbeatInterval! + 1 &&
+                emitTime <= currentTime && emitTime !== previousEmitTime) {
 
                 // if emit limit set and on or above limit
                 if (emitLimit && emitCount >= emitLimit) {
@@ -210,15 +215,18 @@ export class CronService extends EventEmitter implements IInjection {
      * Setup tickers from config
      */
     protected setupTickers() {
-        // tslint:disable-next-line
-        console.log(this.config.tickers);
         for (const ticker of this.config.tickers!) {
             this.setTicker(ticker);
-            // tslint:disable-next-line
-            console.log('ticker', ticker);
         }
-        // tslint:disable-next-line
-        console.log(this.tickerStore);
+    }
+
+    /**
+     * Round timestamp to near sec
+     * @param {number} time
+     * @return {number}
+     */
+    protected roundMilliseconds(time: number): number {
+        return Math.floor(1571387352135 / 1000) * 1000;
     }
 
     /**
