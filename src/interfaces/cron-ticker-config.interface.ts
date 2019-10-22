@@ -1,7 +1,9 @@
 import {ICronTickerPeriod} from './cron-ticker-period.interface';
 
 export interface ICronTickerConfig extends ICronTickerPeriod {
-    eventType: string;
-    tickerCallback: (...args: any[]) => any;
+    // id you can identify ticker against (e.g. when doing cronService.on(...) or deleting ticker)
+    tickerEventId: string;
+    // ticker callback
+    tickerCallback?: (...args: any[]) => any;
     emitLimit?: number;
 }

@@ -1,4 +1,5 @@
 import {IInjection} from 'jetli';
+import {IDataStoreConfig} from '../interfaces';
 import {GenericDataStore} from './generic-data-store.class';
 
 /**
@@ -6,7 +7,13 @@ import {GenericDataStore} from './generic-data-store.class';
  */
 export class DataStoreService implements IInjection {
     public initialised = false;
+    protected config: IDataStoreConfig;
     protected dataStores: { [dataStoreKey: string]: GenericDataStore } = {};
+
+    constructor(config?: IDataStoreConfig) {
+        this.applyConfig(config);
+        this.setupStores();
+    }
 
     /**
      * Initialise data-store service
@@ -49,13 +56,24 @@ export class DataStoreService implements IInjection {
      */
     public get<ENTRY = any>(
         dataStoreKey: string | number,
-        namespaceKey: string | number,
-        entryKey: string | number
+        namespaceKey?: string | number,
+        entryKey?: string | number
     ): ENTRY | void {
-        if (!dataStoreKey && dataStoreKey !== 0) {
+        if (typeof dataStoreKey === 'undefined') {
             return;
         }
         const dataStore = this.getDataStore(dataStoreKey);
+
+        // if no entry key or namespace
+        if (typeof namespaceKey === 'undefined' || typeof entryKey === 'undefined') {
+            if (typeof namespaceKey === 'undefined') {
+                // return whole datastore
+                return dataStore.getAll() as any;
+            }
+
+            // if namespace provided and no entry key return namespace
+            return dataStore.getNamespace(namespaceKey) as any;
+        }
 
         return dataStore.get(namespaceKey, entryKey);
     }
@@ -95,5 +113,30 @@ export class DataStoreService implements IInjection {
             this.dataStores[dataStoreKey] = new GenericDataStore();
         }
         return this.dataStores[dataStoreKey];
+    }
+
+    protected setupStores() {
+        if (this.config.stores) {
+            for (const [storeKey, storeEntries] of Object.entries(this.config.stores)) {
+                for (const entry of storeEntries) {
+                    this.set(storeKey, entry.namespaceKey, entry.entryKey, entry.entry);
+                }
+            }
+        }
+    }
+
+    /**
+     * Apply config
+     * @param {ISimulationConfig} config
+     */
+    protected applyConfig(config?: IDataStoreConfig) {
+        this.config = {
+            enabled: true,
+            stores: {}
+        };
+
+        if (config) {
+            Object.assign(this.config, config);
+        }
     }
 }

@@ -1,7 +1,7 @@
 import {IInjection, jetli} from 'jetli';
 import {ISimulationConfig} from '../interfaces';
-import {DataStoreService} from './data-store-service.class';
 import {CronService} from './cron-service.class';
+import {DataStoreService} from './data-store-service.class';
 import {HttpProxyService} from './http-proxy-service.class';
 import {ServerService} from './server-service.class';
 
@@ -22,11 +22,16 @@ export class Simulation implements IInjection {
      * @return {Promise<void>}
      */
     public async init() {
-        this.eventCronService = await jetli.get(CronService, this.config.cron);
-        this.httpProxyService = await jetli.get(HttpProxyService, this.config.httpProxy);
-        this.dataStoreService = await jetli.get(DataStoreService);
-
-        if (this.config.serverEnabled) {
+        if (this.config.cron && this.config.cron.enabled) {
+            this.eventCronService = await jetli.get(CronService, this.config.cron);
+        }
+        if (this.config.httpProxy && this.config.httpProxy.enabled) {
+            this.httpProxyService = await jetli.get(HttpProxyService, this.config.httpProxy);
+        }
+        if (this.config.datastore && this.config.datastore.enabled) {
+            this.dataStoreService = await jetli.get(DataStoreService, this.config.datastore);
+        }
+        if (this.config.server && this.config.server.enabled) {
             this.serverService = await jetli.get(ServerService, this.config.server);
         }
 
@@ -41,17 +46,34 @@ export class Simulation implements IInjection {
      */
     protected applyConfig(config?: ISimulationConfig) {
         this.config = {
-            // by default server disabled
-            serverEnabled: false,
+            // default server config
+            datastore: {
+                // by default enabled
+                enabled: true,
+                // by default no stores
+                stores: {}
+            },
             // default server config
             server: {
+                // by default disabled
+                enabled: false,
                 // default port
-                port: 8000
+                port: 8000,
+                // by default no routes
+                routes: []
             },
             // default http proxy config
             httpProxy: {
+                // by default enabled
+                enabled: true,
                 // by default no overwrites
                 overwrites: []
+            },
+            cron: {
+                // by default enabled
+                enabled: true,
+                // by default no tickers
+                tickers: []
             }
         };
 

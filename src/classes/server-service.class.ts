@@ -1,4 +1,4 @@
-import express, {Application, IRouterMatcher} from 'express';
+import express, {Application} from 'express';
 import {IInjection} from 'jetli';
 import {HttpMethod} from '../enums';
 import {IServerConfig, ISimulationConfig} from '../interfaces';
@@ -23,6 +23,7 @@ export class ServerService implements IInjection {
      * @return {Promise<void>}
      */
     public async init() {
+        // start server if enabled
         await this.startServer();
         this.initialised = true;
         // tslint:disable-next-line
@@ -30,37 +31,28 @@ export class ServerService implements IInjection {
     }
 
     /**
-     * Setups server
+     * Set single route
+     * @param {IRouteConfig} route
      */
-    protected setupServer() {
-        this.server.use(express.json());
-    }
-
-    /**
-     * Setup routes
-     */
-    protected setupRoutes() {
-        for (const route of this.config.routes!) {
-            switch (route.method) {
-                case HttpMethod.GET:
-                    this.setRoute(this.server.get, route);
-                    break;
-                case HttpMethod.POST:
-                    this.setRoute(this.server.post, route);
-                    break;
-                case HttpMethod.PUT:
-                    this.setRoute(this.server.put, route);
-                    break;
-                case HttpMethod.DELETE:
-                    this.setRoute(this.server.delete, route);
-                    break;
-                default:
-                    throw new Error(`Invalid route method: ${route.method}`);
-            }
+    public setRoute(route: IRouteConfig) {
+        // assign route handler
+        let routeHandler;
+        switch (route.method) {
+            case HttpMethod.GET:
+                routeHandler = this.server.get;
+                break;
+            case HttpMethod.POST:
+                routeHandler = this.server.post;
+                break;
+            case HttpMethod.PUT:
+                routeHandler = this.server.put;
+                break;
+            case HttpMethod.DELETE:
+                routeHandler = this.server.delete;
+                break;
+            default:
+                throw new Error(`Invalid route method: ${route.method}`);
         }
-    }
-
-    protected setRoute(routeHandler: IRouterMatcher<any>, route: IRouteConfig) {
         // lets make sure we dont loose scope for server
         routeHandler = routeHandler.bind(this.server);
 
@@ -86,6 +78,31 @@ export class ServerService implements IInjection {
     }
 
     /**
+     * Setup routes
+     */
+    public setRoutes(routes: IRouteConfig[]) {
+        for (const route of routes) {
+            this.setRoute(route);
+        }
+    }
+
+    /**
+     * Setups server
+     */
+    protected setupServer() {
+        this.server.use(express.json());
+    }
+
+    /**
+     * Setup tickers from config
+     */
+    protected setupRoutes() {
+        if (this.config.routes) {
+            this.setRoutes(this.config.routes);
+        }
+    }
+
+    /**
      * Start a server
      * @return {Promise<void>}
      */
@@ -103,6 +120,7 @@ export class ServerService implements IInjection {
      */
     protected applyConfig(config?: IServerConfig) {
         this.config = {
+            enabled: true,
             port: 8000,
             routes: []
         };

@@ -10,7 +10,7 @@ export class CronService extends EventEmitter implements IInjection {
     public initialised = false;
     protected config: ICronConfig;
     protected heartbeat: NodeJS.Timer;
-    protected tickerStore: { [eventType: string]: ITickerConfigStoreEntry } = {};
+    protected tickerStore: { [tickerEventId: string]: ITickerConfigStoreEntry } = {};
 
     constructor(config?: ICronConfig) {
         super();
@@ -47,24 +47,38 @@ export class CronService extends EventEmitter implements IInjection {
         configStoreEntry.nextEmitTime = nextEmitTime;
 
         // create new listener for the tick event
-        this.on(tickConfig.eventType, tickConfig.tickerCallback);
+        if (tickConfig.tickerCallback) {
+            this.on(tickConfig.tickerEventId, tickConfig.tickerCallback);
+        }
 
         // create new ticker
-        this.tickerStore[tickConfig.eventType] = configStoreEntry;
+        this.tickerStore[tickConfig.tickerEventId] = configStoreEntry;
+    }
+
+    /**
+     * Set multiple tickers
+     * @param {ICronTickerConfig[]} tickers
+     */
+    public setTickers(tickers: ICronTickerConfig[]) {
+        for (const ticker of tickers) {
+            this.setTicker(ticker);
+        }
     }
 
     /**
      * Unset event tick
-     * @param {string} eventType
+     * @param {string} tickerEventId
      */
-    public unsetTicker(eventType: string): void {
-        const tickerStoreEntry = this.tickerStore[eventType];
+    public unsetTicker(tickerEventId: string): void {
+        const tickerStoreEntry = this.tickerStore[tickerEventId];
 
         if (tickerStoreEntry) {
-            // remove listener for the tick event
-            this.removeEventListener(tickerStoreEntry.eventType, tickerStoreEntry.tickerCallback);
+            if (tickerStoreEntry.tickerCallback) {
+                // remove listener for the tick event
+                this.removeEventListener(tickerStoreEntry.tickerEventId, tickerStoreEntry.tickerCallback);
+            }
             // remove ticker
-            delete this.tickerStore[eventType];
+            delete this.tickerStore[tickerEventId];
         }
     }
 
@@ -124,7 +138,7 @@ export class CronService extends EventEmitter implements IInjection {
                 msMultipiler = 1000;
                 break;
             case 'm':
-                msMultipiler = 1000 * 100;
+                msMultipiler = 1000 * 60;
                 break;
             case 'h':
                 msMultipiler = 1000 * 100 * 60;
@@ -159,43 +173,30 @@ export class CronService extends EventEmitter implements IInjection {
      * Heartbeat interval evaluation
      */
     protected heartbeatTickEvaluation() {
-        // tslint:disable-next-line
-        console.log(`---------- cron eval ------------ hh:${new Date().getMinutes()}:${new Date().getSeconds()}`);
         const currentTime = new Date().getTime();
 
         // evaluate each ticker config
         for (const [storeKey, tickerStoreEntry] of Object.entries(this.tickerStore)) {
-            const eventType = tickerStoreEntry.eventType;
+            const tickerEventId = tickerStoreEntry.tickerEventId;
             const emitLimit = tickerStoreEntry.emitLimit;
             const emitCount = tickerStoreEntry.emitCount;
             const emitTime = tickerStoreEntry.nextEmitTime;
             const previousEmitTime = tickerStoreEntry.previousEmitTime;
-            // tslint:disable-next-line
-            console.log(
-                `${eventType} ticker eval`, ' | ', `emits: ${emitCount}/${emitLimit}`, ' | ',
-                `Trigger time: ${emitTime}`
-            );
 
             // check if we should emit event now, be sure we dont emit multiple times for same nextEmitTime
-            // tslint:disable-next-line
-            console.log(`Test: ${emitTime} >= ${currentTime} && ${emitTime} !== ${previousEmitTime}`);
             // lets take into consideration events between previous tick and now (e.g. if step is uneven)
             if (emitTime >= currentTime - this.config.heardbeatInterval! + 1 &&
                 emitTime <= currentTime && emitTime !== previousEmitTime) {
 
                 // if emit limit set and on or above limit
                 if (emitLimit && emitCount >= emitLimit) {
-                    // tslint:disable-next-line
-                    console.log(`${eventType} ticker`, ' | ', `limit reached - removing`);
                     // remove ticker and bailout
-                    this.unsetTicker(eventType);
+                    this.unsetTicker(tickerEventId);
                     continue;
                 }
 
-                // tslint:disable-next-line
-                console.log(`${eventType} ticker`, ' | ', `tick`);
                 // emit ticker event
-                this.emit(tickerStoreEntry.eventType);
+                this.emit(tickerStoreEntry.tickerEventId);
 
                 // update record
                 const tickerStoreEntryUpdates = {
@@ -215,18 +216,9 @@ export class CronService extends EventEmitter implements IInjection {
      * Setup tickers from config
      */
     protected setupTickers() {
-        for (const ticker of this.config.tickers!) {
-            this.setTicker(ticker);
+        if (this.config.tickers) {
+            this.setTickers(this.config.tickers);
         }
-    }
-
-    /**
-     * Round timestamp to near sec
-     * @param {number} time
-     * @return {number}
-     */
-    protected roundMilliseconds(time: number): number {
-        return Math.floor(1571387352135 / 1000) * 1000;
     }
 
     /**

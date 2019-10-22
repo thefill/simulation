@@ -1,7 +1,7 @@
 import {IInjection} from 'jetli';
 import SuperAgent, {Request, Response} from 'superagent';
 import {HttpMethod} from '../enums';
-import {IHttpProxyConfig} from '../interfaces';
+import {IHttpProxyConfig, IHttpProxyOverwrite} from '../interfaces';
 import {ProxyOverwriteCallback} from '../types';
 import {GenericDataStore} from './generic-data-store.class';
 
@@ -17,11 +17,7 @@ export class HttpProxyService implements IInjection {
 
     constructor(config?: IHttpProxyConfig) {
         this.applyConfig(config);
-
-        // set provided overwrites
-        for (const overwrite of this.config.overwrites) {
-            this.setOverwrite(overwrite.method, overwrite.url, overwrite.callback);
-        }
+        this.setupOverwrites();
     }
 
     /**
@@ -83,10 +79,7 @@ export class HttpProxyService implements IInjection {
      * @param {"GET" | "POST" | "PUT" | "DELETE"} method
      * @param {string} url
      */
-    public unsetOverwrite(
-        method: HttpMethod,
-        url: string
-    ): void {
+    public unsetOverwrite(method: HttpMethod, url: string): void {
         this.overwrites.delete(method, url);
     }
 
@@ -96,12 +89,28 @@ export class HttpProxyService implements IInjection {
      * @param {string} url
      * @param {ProxyOverwriteCallback} callback
      */
-    public setOverwrite(
-        method: HttpMethod,
-        url: string,
-        callback: ProxyOverwriteCallback
-    ): void {
+    public setOverwrite(method: HttpMethod, url: string, callback: ProxyOverwriteCallback): void {
         this.overwrites.set(method, url, callback);
+    }
+
+    /**
+     * Set multiple overwrites
+     * @param {IHttpProxyOverwrite[]} overwrites
+     */
+    public setOverwrites(overwrites: IHttpProxyOverwrite[]) {
+        for (const overwrite of overwrites) {
+            this.setOverwrite(overwrite.method, overwrite.url, overwrite.callback);
+        }
+    }
+
+    /**
+     * Setup initial overwrites
+     */
+    protected setupOverwrites() {
+        // set provided overwrites
+        if (this.config.overwrites) {
+            this.setOverwrites(this.config.overwrites);
+        }
     }
 
     /**
@@ -112,13 +121,20 @@ export class HttpProxyService implements IInjection {
      * @param payload
      * @return {Promise<RESPONSE>}
      */
-    protected resolveRequest<RESPONSE = any>(
-        method: HttpMethod,
-        url: string,
-        headers?: any,
-        payload?: any
+    protected resolveRequest<RESPONSE = any>(method: HttpMethod, url: string, headers?: any, payload?: any
     ): Promise<RESPONSE> {
-        const overwrite = this.overwrites.get<ProxyOverwriteCallback>(method, url);
+        let overwrite = this.overwrites.get<ProxyOverwriteCallback>(method, url);
+
+        // if no overwrite for the url then find url that starts with this string
+        if (!overwrite) {
+            const namespaceStoreQueryResult = this.overwrites.query<ProxyOverwriteCallback>(
+                method, [{operator: 'regex', value: new RegExp(url)}]
+            );
+            // if result returned take first from the list
+            if (namespaceStoreQueryResult && namespaceStoreQueryResult.length) {
+                overwrite = namespaceStoreQueryResult[0];
+            }
+        }
 
         if (overwrite) {
             return overwrite(method, url, headers, payload);
@@ -136,10 +152,7 @@ export class HttpProxyService implements IInjection {
      * @return {Promise<RESPONSE>}
      */
     protected async passTrough<RESPONSE = any>(
-        method: HttpMethod,
-        url: string,
-        headers?: any,
-        payload?: any
+        method: HttpMethod, url: string, headers?: any, payload?: any
     ): Promise<RESPONSE> {
 
         let request: Request;
@@ -181,7 +194,6 @@ export class HttpProxyService implements IInjection {
         if (response.error) {
             throw new Error(JSON.stringify(response.error));
         }
-
         return response.body;
     }
 

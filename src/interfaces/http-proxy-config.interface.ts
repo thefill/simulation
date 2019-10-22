@@ -1,11 +1,8 @@
-import {HttpMethod} from '../enums';
-import {ProxyOverwriteCallback} from '../types';
+import {IHttpProxyOverwrite} from './http-proxy-overwrite.interface';
 
 export interface IHttpProxyConfig {
+    // proxy enabled
+    enabled?: boolean;
     // http overwrites
-    overwrites: Array<{
-        url: string,
-        method: HttpMethod,
-        callback: ProxyOverwriteCallback
-    }>;
+    overwrites?: IHttpProxyOverwrite[];
 }
